@@ -95,7 +95,7 @@ promise_test(
 promise_test(
     async t => {
       await RunCallbackWithGesture(
-        () => promise_rejects_dom(t, 'NotAllowedError', document.requestStorageAccessFor('bogus-url'),
+        () => promise_rejects_dom(t, 'SyntaxError', document.requestStorageAccessFor('bogus-url'),
           'document.requestStorageAccessFor() call with bogus URL'));
     },
     '[top-level-context] document.requestStorageAccessFor() should be rejected when called with an invalid origin');
