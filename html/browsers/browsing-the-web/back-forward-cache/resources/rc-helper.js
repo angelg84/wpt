@@ -43,6 +43,8 @@ function sorted(s) {
 
 // Assert expected reasons and the reported reasons match.
 function matchReasons(expectedNotRestoredReasonsSet, notRestoredReasonsSet) {
+  expectedNotRestoredReasonsSet = extractReason(expectedNotRestoredReasonsSet);
+  notRestoredReasonsSet = extractReason(notRestoredReasonsSet);
   const missing = setMinus(
     expectedNotRestoredReasonsSet, notRestoredReasonsSet, 'Missing reasons');
   const extra = setMinus(
@@ -51,6 +53,14 @@ function matchReasons(expectedNotRestoredReasonsSet, notRestoredReasonsSet) {
     `Got: ${sorted(notRestoredReasonsSet)}\n` +
     `Missing: ${sorted(missing)}\n` +
     `Extra: ${sorted(extra)}\n`);
+}
+
+function extractReason(reasonSet) {
+  let reasonsExtracted = new Set();
+  for (let reason of reasonSet) {
+    reasonsExtracted.add(reason.reason);
+  }
+  return reasonsExtracted;
 }
 
 // A helper function to assert that the page is not restored from BFCache by

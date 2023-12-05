@@ -1,21 +1,21 @@
 // META: script=../../html/browsers/browsing-the-web/back-forward-cache/resources/rc-helper.js
 
 async function assertNotRestoredReasonsEquals(
-    remoteContextHelper, blocked, url, src, id, name, reasons, children) {
+    remoteContextHelper, url, src, id, name, reasons, children) {
   let result = await remoteContextHelper.executeScript(() => {
     return performance.getEntriesByType('navigation')[0].notRestoredReasons;
   });
   assertReasonsStructEquals(
-      result, blocked, url, src, id, name, reasons, children);
+      result, url, src, id, name, reasons, children);
 }
 
 function assertReasonsStructEquals(
-    result, blocked, url, src, id, name, reasons, children) {
-  assert_equals(result.preventedBackForwardCache, blocked);
+    result, url, src, id, name, reasons, children) {
   assert_equals(result.url, url);
   assert_equals(result.src, src);
   assert_equals(result.id, id);
   assert_equals(result.name, name);
+
   // Reasons should match.
   matchReasons(new Set(reasons), new Set(result.reasons));
 
@@ -25,7 +25,7 @@ function assertReasonsStructEquals(
   } else {
     for (let j = 0; j < children.length; j++) {
       assertReasonsStructEquals(
-          result.children[0], children[0].preventedBackForwardCache, children[0].url,
+          result.children[0], children[0].url,
           children[0].src, children[0].id, children[0].name, children[0].reasons,
           children[0].children);
     }
