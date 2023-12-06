@@ -1,134 +1,206 @@
 <!doctype html>
 <html>
-    <head>
-        <title>Pointer Events properties tests</title>
-        <meta name="viewport" content="width=device-width">
-        <link rel="stylesheet" type="text/css" href="pointerevent_styles.css">
-        <script src="/resources/testharness.js"></script>
-        <script src="/resources/testharnessreport.js"></script>
-        <script src="/resources/testdriver.js"></script>
-        <script src="/resources/testdriver-actions.js"></script>
-        <script src="/resources/testdriver-vendor.js"></script>
-        <!-- Additional helper script for common checks across event types -->
-        <script type="text/javascript" src="pointerevent_support.js"></script>
-        <script>
-            var detected_pointertypes = {};
-            var detected_eventTypes = {};
-            var eventList = ['pointerover', 'pointerenter', 'pointerdown', 'pointerup', 'pointerout', 'pointerleave'];
-            // TODO(mustaq@chromium.org): missing touch pointermove coverage!
-            var expectedPointerId = NaN;
+<head>
+  <title>Pointer Events properties tests</title>
+  <meta name="viewport" content="width=device-width">
+  <link rel="stylesheet" type="text/css" href="pointerevent_styles.css">
+  <style>
+    body {
+      margin: 0;
+    }
 
-            function resetTestState() {
-                detected_eventTypes = {};
-                document.getElementById("square1").style.visibility = 'visible';
-                document.getElementById('innerFrame').contentDocument.getElementById("square2").style.visibility = 'hidden';
-            }
-            function checkPointerEventAttributes(event, targetBoundingClientRect, testNamePrefix) {
-                if (detected_eventTypes[event.type])
-                    return;
-                var expectedEventType =  eventList[Object.keys(detected_eventTypes).length];
-                detected_eventTypes[event.type] = true;
-                var pointerTestName = (testNamePrefix ? testNamePrefix + ' ' : '')
-                    + expectedPointerType + ' ' + expectedEventType;
+    html {
+      touch-action: none;
+    }
 
-                detected_pointertypes[event.pointerType] = true;
+    #drag-from, #drag-to {
+      background-color: green;
+      border: 1px solid black;
+      margin: 0;
+      padding: 0;
+      height: 50px;
+      width: 50px;
+    }
+  </style>
+</head>
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<script src="/resources/testdriver.js"></script>
+<script src="/resources/testdriver-actions.js"></script>
+<script src="/resources/testdriver-vendor.js"></script>
+<!-- Additional helper script for common checks across event types -->
+<script type="text/javascript" src="pointerevent_support.js"></script>
+<script>
 
-                test(function() {
-                    assert_equals(event.type, expectedEventType);
-                }, pointerTestName + ".type should be " + expectedEventType);
+  const eventList = [
+    'pointerover',
+    'pointerenter',
+    'pointerdown',
+    'pointerup',
+    'pointerout',
+    'pointerleave',
+    'pointermove'
+  ];
 
-                // Test button and buttons
-                test(function() {
-                    assert_equals(event.button, 0);
-                }, pointerTestName + ".button attribute is 0 on touch-down.");
+  window.onload = async () => {
 
-                if (event.type == 'pointerdown' || event.type == 'pointerover' || event.type == 'pointerenter') {
-                    test(function() {
-                        assert_equals(event.buttons, 1);
-                    }, pointerTestName + ".buttons attribute is 1 on touch-down.");
-                } else {
-                    test(function() {
-                        assert_equals(event.buttons, 0);
-                    }, pointerTestName + ".buttons is 0 on touch-release.");
-                }
+    // Expectations are for the attributes on the first instace of each event.
+    const expectations = {
+      pointerover: {
+        button: 0,
+        buttons: 1,
+        containingElement: 'drag-from'
+      },
+      pointerenter: {
+        button: 0,
+        buttons: 1,
+        containingElement: 'drag-from'
+      },
+      pointerdown: {
+        button: 0,
+        buttons: 1,
+        containingElement: 'drag-from'
+      },
+      pointermove: {
+        button: -1,
+        buttons: 1,
+        containingElement: 'drag-to'
+      },
+      pointerup: {
+        button: 0,
+        buttons: 0,
+        containingElement: 'drag-to'
+      },
+      pointerout: {
+        button: 0,
+        buttons: 0,
+        containingElement: 'drag-to'
+      },
+      pointerleave: {
+        button: 0,
+        buttons: 0,
+        containingElement: 'drag-to'
+      },
+    }
 
-                // Test clientX and clientY
-                test(function () {
-                    assert_true(event.clientX >= targetBoundingClientRect.left && event.clientX < targetBoundingClientRect.right && event.clientY >= targetBoundingClientRect.top && event.clientY < targetBoundingClientRect.bottom);
-                }, pointerTestName + ".clientX and .clientY attributes are correct.");
+    function getExpectation(event_type, attribute) {
+      if (!expectations[event_type])
+        return undefined;
 
-                check_PointerEvent(event, testNamePrefix);
+      return expectations[event_type][attribute];
+    }
 
-                // Test isPrimary
-                test(function () {
-                    assert_equals(event.isPrimary, true);
-                }, pointerTestName + ".isPrimary attribute is true.");
+    function checkPointerEventAttributes(pointer_type, event_type, event) {
+      const testPrefix = `${pointer_type}-${event_type}`;
+      test(function() {
+        assert_equals(event.type, event_type);
+      }, `${testPrefix}: type should be ${event_type}`);
 
-                // Test pointerId value
-                if (isNaN(expectedPointerId)) {
-                    expectedPointerId = event.pointerId;
-                } else {
-                    test(function () {
-                        assert_equals(event.pointerId, expectedPointerId);
-                    }, pointerTestName + ".pointerId should be the same as previous pointer events for this active pointer.");
-                }
-            }
+      const button = getExpectation(event_type,'button');
+      if (button !== undefined) {
+        test(function() {
+          assert_equals(event.button, button);
+        }, `${testPrefix}: button attribute matches expectation`);
+      }
 
-            async function run() {
-                var test_pointerEvent = setup_pointerevent_test("pointerevent attributes", ['touch']);
-                var square1 = document.getElementById("square1");
-                var rectSquare1 = square1.getBoundingClientRect();
-                var innerFrame = document.getElementById('innerFrame');
-                var square2 = innerFrame.contentDocument.getElementById('square2');
-                var rectSquare2 = square2.getBoundingClientRect();
+      const buttons = getExpectation(event_type,'buttons');
+      if (buttons !== undefined) {
+        test(function() {
+          assert_equals(event.buttons, buttons);
+        }, `${testPrefix}: buttons attribute matches expectation`);
+      }
 
-                eventList.forEach(function(eventName) {
-                    on_event(square1, eventName, function (event) {
-                        if (square1.style.visibility == 'hidden')
-                            return;
-                        checkPointerEventAttributes(event, rectSquare1, "");
-                        if (Object.keys(detected_eventTypes).length == eventList.length) {
-                            square1.style.visibility = 'hidden';
-                            detected_eventTypes = {};
-                            square2.style.visibility = 'visible';
-                            expectedPointerId = NaN;
-                        }
-                    });
-                    on_event(square2, eventName, function (event) {
-                        checkPointerEventAttributes(event, rectSquare2, "Inner frame ");
-                        if (Object.keys(detected_eventTypes).length == eventList.length) {
-                            square2.style.visibility = 'hidden';
-                            test_pointerEvent.done();
-                        }
-                    });
-                });
+      // Bounding rect of element must contain (clienX, clientY).
+      const containingElement =
+          getExpectation(event_type, 'containingElement');
+      if (containingElement) {
+        const element = document.getElementById(containingElement);
+        const boundingRect = element.getBoundingClientRect();
+        test(function() {
+          assert_true(
+              boundingRect.left <= event.clientX &&
+              boundingRect.right >= event.clientX);
+        }, `${testPrefix}: clientX is within the expected range`);
+        test(function() {
+          assert_true(
+              boundingRect.top <= event.clientY &&
+              boundingRect.bottom >= event.clientY);
+        }, `${testPrefix}: clientY is within the expected range`);
+      }
 
-                // Inject touch inputs.
-                await clickInTarget("touch", square1);
-                await clickInTarget("touch", square2);
-            }
-        </script>
-    </head>
-    <body onload="run()">
-        <h1>Pointer Events no-hover pointer attributes test</h1>
-        <h2 id="pointerTypeDescription"></h2>
-        <h4>
-            Test Description: This test checks the properties of pointer events that do not support hover.
-            <ol>
-                 <li>Tap the black square.</li>
-                 <li>Then move it off the black square so that it disappears.</li>
-                 <li>When the red square appears tap on that as well.</li>
-            </ol>
+      check_PointerEvent(event, testPrefix);
 
-            Test passes if the proper behavior of the events is observed.
-        </h4>
-        <div id="square1" class="square"></div>
-        <iframe id="innerFrame" src="resources/pointerevent_attributes_hoverable_pointers-iframe.html"></iframe>
-        <div class="spacer"></div>
-        <div id="complete-notice">
-            <p>The following pointer types were detected: <span id="pointertype-log"></span>.</p>
-            <p>Refresh the page to run the tests again with a different pointer type.</p>
-        </div>
-        <div id="log"></div>
-    </body>
+      // Test isPrimary
+      test(function () {
+        assert_equals(event.isPrimary, true);
+      }, `${testPrefix}: isPrimary attribute is true.`);
+
+      return event.pointerId;
+    }
+
+    async function runPointerTest(test_fixture, pointer_type) {
+      const listeners = {};
+      let expected_pointer_id = undefined;
+      // check_PointerEvent expects that the event target is not the root
+      // document.
+      const target = document.getElementById('wrapper');
+      eventList.forEach(type => {
+        const listener = (event) => {
+          const pointer_id =
+              checkPointerEventAttributes(pointer_type, type, event);
+          if (expected_pointer_id === undefined) {
+             expected_pointer_id = pointer_id;
+          } else {
+            const testPrefix = `${pointer_type}-${type}`;
+            const message =
+                'pointerId should be the same as previous pointer events for ' +
+                'this active pointer.';
+            test(function () {
+              assert_equals(event.pointerId, expected_pointer_id);
+            }, `${testPrefix}: ${message}`);
+          }
+
+          target.removeEventListener(type, listener);
+          delete listeners[type];
+        }
+        target.addEventListener(type, listener);
+        listeners[type] = listener;
+      });
+      test_fixture.add_cleanup(() => {
+        for (key in listeners) {
+          target.removeEventListener(key, listeners[key]);
+        }
+      });
+
+      // Trigger gesture.
+      const dragFrom = document.getElementById('drag-from');
+      const dragTo = document.getElementById('drag-to');
+      await new test_driver.Actions()
+        .addPointer('pointer1', pointer_type)
+        .pointerMove(0, 0, {origin: dragFrom})
+        .pointerDown()
+        .addTick()
+        .addTick()
+        .pointerMove(0, 0, {origin: dragTo})
+        .addTick()
+        .addTick()
+        .pointerUp()
+        .send();
+
+      assert_equals(Object.keys(listeners).length, 0,
+                    `Missing tests for ${Object.keys(listeners).join(', ')}`);
+    }
+
+    promise_test(t => {
+      return runPointerTest(t, 'touch');
+    }, 'Attributes on touch pointer events.');
+
+  };
+</script>
+<body>
+  <div id="wrapper">
+    <div id="drag-from"></div>
+    <div id="drag-to"></div>
+  </div>
+</body>
 </html>
