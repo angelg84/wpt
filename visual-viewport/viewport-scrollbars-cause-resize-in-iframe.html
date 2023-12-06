@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Viewport: Scrollbars Cause Resize</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, minimum-scale=1">
+        <script src="/resources/testharness.js"></script>
+        <script src="/resources/testharnessreport.js"></script>
+        <script src="viewport_support.js"></script>
+    </head>
+    <body>
+    <h1>Viewport: Scrollbars Cause Resize In IFrame</h1>
+    <h4>
+        Test Description: This test checks that the appearance of classic
+        scrollbars will cause a resize event to be fired at window.visualViewport in iframe.
+    </h4>
+    <iframe srcdoc="<p>Hello, world!</p>"></iframe>
+    <script>
+      async_test(t => {
+        document.addEventListener("DOMContentLoaded", () => {
+          const iframe = document.querySelector("iframe");
+          onload = () => {
+            requestAnimationFrame(() => { requestAnimationFrame(() => {
+              // First full rendering update is complete.
+              let resize_event_count = 0;
+              iframe.contentWindow.visualViewport.addEventListener("resize", () => {
+                resize_event_count++;
+              });
+              iframe.contentDocument.body.style.height = "10000px";
+              requestAnimationFrame(() => {
+                t.step(() => {
+                  assert_equals(resize_event_count, 1);
+                  t.done();
+                });
+              }) }); // 2x requestAnimationFrame
+            })
+          };
+        });
+      }, "the appearance of classic scrollbars will fire a resize event" +
+         "at window.visualViewport in iframe");
+    </script>
+    <div id="log"></div>
+    </body>
+</html>
